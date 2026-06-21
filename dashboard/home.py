@@ -1,8 +1,76 @@
 import streamlit as st
+import plotly.graph_objects as go
 
+@st.dialog("📊 Advanced Fixture Insights & Value Edge")
 def show_insights_window(match_data):
-    """Placeholder for the modal popup window."""
-    st.write("Displaying advanced analytics for:", match_data['fixture'])
+    """
+    Renders an interactive breakdown modal comparing Model Probabilities 
+    against implied bookmaker probabilities using Plotly.
+    """
+    st.write(f"### Analytics for: **{match_data['fixture']}**")
+    
+    # Extract data parameters safely
+    home_pct = match_data['home_pct']
+    draw_pct = match_data['draw_pct']
+    away_pct = match_data['away_pct']
+    bookie_odds = match_data['home_odds']
+    
+    # Calculate bookmaker's implied market probability for the Home Win
+    implied_home_pct = round((1 / bookie_odds) * 100, 1)
+    
+    st.markdown("---")
+    st.write("#### 📈 Probability Distribution Comparison")
+    
+    # Build a clean data visualization using Plotly chart objects
+    categories = ['Home Win', 'Draw', 'Away Win']
+    model_probabilities = [home_pct, draw_pct, away_pct]
+    
+    fig = go.Figure()
+    
+    # Trace 1: Our AI Engine Predictions
+    fig.add_trace(go.Bar(
+        x=categories,
+        y=model_probabilities,
+        name='SoccerAI Pro Model',
+        marker_color='#10b981', # Green
+        text=[f"{val}%" for val in model_probabilities],
+        textposition='auto'
+    ))
+    
+    # Trace 2: The Implied Bookmaker baseline marker line for Home Win
+    fig.add_trace(go.Scatter(
+        x=['Home Win'],
+        y=[implied_home_pct],
+        name=f'Bookie Implied ({implied_home_pct}%)',
+        mode='markers',
+        marker=dict(color='#ef4444', size=15, symbol='line-ew-open', line=dict(width=4)) # Red Line
+    ))
+    
+    fig.update_layout(
+        barmode='group',
+        yaxis=dict(title='Probability Percentage (%)', range=[0, 100]),
+        margin=dict(l=20, r=20, t=20, b=20),
+        height=300,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Value Evaluation Assessment Box
+    edge = home_pct - implied_home_pct
+    st.write("#### 🧠 Market Valuation Strategy")
+    if edge > 0:
+        st.info(
+            f"**Value Detected:** Your AI model estimates a **{home_pct}%** chance of a home victory, "
+            f"while the bookmaker odds of {bookie_odds} imply only a **{implied_home_pct}%** chance. "
+            f"This creates a mathematical value edge of **+{edge:.1f}%** supporting your Kelly stake."
+        )
+    else:
+        st.warning(
+            f"**No Market Value:** Your AI model estimates a **{home_pct}%** chance of a home victory, "
+            f"which is lower than or equal to the bookmaker's implied market price (**{implied_home_pct}%**). "
+            f"Avoid exposure on this match outcome."
+        )
 
 def render_home():
     st.title('⚽ Soccer AI Pro Dashboard')
@@ -52,7 +120,7 @@ def render_home():
     else:
         recommended_stake_pct = 0.0
 
-    # 5. Settings Configuration Panel (Col1 & Col2 layout matching lines 18-25 in your view)
+    # 5. Settings Configuration Panel
     st.subheader("⚙️ Staking & Valuation Configuration")
     col1, col2 = st.columns(2)
     
